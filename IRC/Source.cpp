@@ -28,7 +28,7 @@ DWORD WINAPI exitcode(SOCKET *ListenSocket);
 struct mystruct{
 	SOCKET clientsocket;
 	char clientname[16];
-	char totalrecvbuf[DEFAULT_BUFLEN*4];
+	char totalrecvbuf[DEFAULT_BUFLEN * 4];
 	char tempbuf[DEFAULT_BUFLEN * 4];
 	char recvbuf[DEFAULT_BUFLEN];
 };
@@ -52,23 +52,16 @@ int main()
 
 	struct addrinfo *result = NULL;
 	struct addrinfo hints;
-	
 
 	int iSendResult;
-	
 
-	
-
-	
 	int recvbuflen = DEFAULT_BUFLEN;
 	int recvbuflenmain = DEFAULT_BUFLEN * 4;
-
 
 	// Initialize Winsock
 	iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
 	if (iResult != 0) {
 		printf("WSAStartup failed with error: %d\n", iResult);
-
 	}
 
 	ZeroMemory(&hints, sizeof(hints));
@@ -95,15 +88,10 @@ int main()
 	if (iResult != NO_ERROR)
 		printf("ioctlsocket failed with error: %ld\n", iResult);
 
-
 	iResult = setsockopt(ListenSocket, SOL_SOCKET, SO_REUSEADDR, (char *)&bOptVal, bOptLen);
 	if (iResult == SOCKET_ERROR) {
 		wprintf(L"setsockopt for SO_REUSEADDR failed with error: %u\n", WSAGetLastError());
 	}
-	
-
-	
-
 
 	// Setup the TCP listening socket
 	iResult = bind(ListenSocket, result->ai_addr, (int)result->ai_addrlen);
@@ -112,7 +100,6 @@ int main()
 		closesocket(ListenSocket);
 		WSACleanup();
 		return 1;
-
 	}
 
 	freeaddrinfo(result);
@@ -121,7 +108,6 @@ int main()
 	int currentReceived = 0;
 
 	do{
-
 		//put the socket in a listen state for incoming connections
 		iResult = listen(ListenSocket, SOMAXCONN);
 		if (iResult == SOCKET_ERROR) {
@@ -144,7 +130,6 @@ int main()
 			temp_pointer = NULL;
 		}
 
-
 		int array_size = clientarray.size();
 
 		int i = 0;
@@ -155,14 +140,11 @@ int main()
 			for (i; i < array_size; i++)
 			{
 				iSendResult = 0;
-				
 
 				currentReceived = recv(clientarray.at(i)->clientsocket, clientarray.at(i)->recvbuf, recvbuflen, 0);
-				
 
 				if (currentReceived > 0)
 				{
-
 					// First this part, a small security check. Making sure that i don't overflow
 					// totalrecvbuf. If the amount goes above DEFAULT_BUFLEN *4, make sure i don't actually
 					// overfill it.
@@ -187,15 +169,10 @@ int main()
 							totalReceived += slength;
 							strcat(clientarray.at(i)->totalrecvbuf, sclientnum);
 						}
-							strncat(clientarray.at(i)->totalrecvbuf, clientarray.at(i)->tempbuf, totalReceived);
-						
+						strncat(clientarray.at(i)->totalrecvbuf, clientarray.at(i)->tempbuf, totalReceived);
 
-
-
-						 if (!strncmp(uservar, clientarray.at(i)->totalrecvbuf, strlen(uservar)))
+						if (!strncmp(uservar, clientarray.at(i)->totalrecvbuf, strlen(uservar)))
 						{
-
-
 							int count = 5;
 							for (int j = 0; j < 16; j++, count++){
 								clientarray.at(i)->clientname[j] = clientarray.at(i)->totalrecvbuf[count];
@@ -204,152 +181,106 @@ int main()
 									clientarray.at(i)->clientname[j] = '\0';
 									break;
 								}
-
 							}
-
-
 
 							int k = 0;
 							char char_check2;
 							do{
-
 								char_check2 = clientarray.at(i)->totalrecvbuf[k];
 								k++;
-
 							} while (char_check2 != '\r');
 							k--;
 
 							memcpy(&clientarray.at(i)->totalrecvbuf[k], " has joined the chat\r\n\0", 23);
-
 
 							totalReceived += 23;
 						}
 						for (int j = 0; j < array_size; j++){
 							if (i != j)
 								iSendResult = send(clientarray.at(j)->clientsocket, clientarray.at(i)->totalrecvbuf, totalReceived, 0);
-
 						}
 						printf("Bytes sent: %d\n", iSendResult);
 						ZeroMemory(clientarray.at(i)->totalrecvbuf, recvbuflenmain);
 						ZeroMemory(clientarray.at(i)->recvbuf, recvbuflen);
 						ZeroMemory(clientarray.at(i)->tempbuf, recvbuflenmain);
 
-
 						currentReceived = 0;
 						totalReceived = 0;
-						
 					}
-					
 				}
-
 				else if (currentReceived == 0)
 				{
-				
-				
-						int j;
-						for (j = 0; j < sizeof(clientarray.at(i)->clientname); j++){
-							clientarray.at(i)->totalrecvbuf[j] = clientarray.at(i)->clientname[j];
-							if (clientarray.at(i)->clientname[j] == '\0')
-								break;
+					int j;
+					for (j = 0; j < sizeof(clientarray.at(i)->clientname); j++){
+						clientarray.at(i)->totalrecvbuf[j] = clientarray.at(i)->clientname[j];
+						if (clientarray.at(i)->clientname[j] == '\0')
+							break;
+					}
+					memcpy(&clientarray.at(i)->totalrecvbuf[j], " has left\r\n\0", 12);
+					int namesize = (j + 1) + 12;
 
-						}
-						memcpy(&clientarray.at(i)->totalrecvbuf[j], " has left\r\n\0", 12);
-						int namesize = (j + 1) + 12;
-
-						for (int j = 0; j < array_size; j++){
-							if (i != j)
+					for (int j = 0; j < array_size; j++){
+						if (i != j)
 							iSendResult = send(clientarray.at(j)->clientsocket, clientarray.at(i)->totalrecvbuf, namesize, 0);
-							
-						}
-						printf("Bytes sent: %d\n", iSendResult);
-						ZeroMemory(clientarray.at(i)->totalrecvbuf, recvbuflenmain);
+					}
+					printf("Bytes sent: %d\n", iSendResult);
+					ZeroMemory(clientarray.at(i)->totalrecvbuf, recvbuflenmain);
 
-					
+					iResult = shutdown(clientarray.at(i)->clientsocket, SD_SEND);
+					if (iResult == SOCKET_ERROR) {
+						printf("shutdown failed with error: %d\n", WSAGetLastError());
+						closesocket(ClientSocket);
+						WSACleanup();
+						return 1;
+					}
+					closesocket(clientarray.at(i)->clientsocket);
+					delete clientarray.at(i);
+					clientarray.erase(clientarray.begin() + i);
 
-						iResult = shutdown(clientarray.at(i)->clientsocket, SD_SEND);
-						if (iResult == SOCKET_ERROR) {
-							printf("shutdown failed with error: %d\n", WSAGetLastError());
-							closesocket(ClientSocket);
-							WSACleanup();
-							return 1;
-						}
-						closesocket(clientarray.at(i)->clientsocket);
-						delete clientarray.at(i);
-						clientarray.erase(clientarray.begin() + i);
-						
+					array_size = clientarray.size();
 
-						array_size = clientarray.size();
-
-
-						totalReceived = 0;
-
-					
+					totalReceived = 0;
 				}
-
 				else if (currentReceived == SOCKET_ERROR&& WSAGetLastError() != WSAEWOULDBLOCK)
 				{
 					printf("recv failed with error: %d\n", WSAGetLastError());
-				
-						int j;
-						for (j = 0; j < sizeof(clientarray.at(i)->clientname); j++){
-							clientarray.at(i)->totalrecvbuf[j] = clientarray.at(i)->clientname[j];
-							if (clientarray.at(i)->clientname[j] == '\0')
-								break;
-						}
-						memcpy(&clientarray.at(i)->totalrecvbuf[j], " has left\r\n\0", 12);
-						int namesize = (j + 1) + 12;
-						for (int j = 0; j < array_size; j++){
-							if (i != j)
+
+					int j;
+					for (j = 0; j < sizeof(clientarray.at(i)->clientname); j++){
+						clientarray.at(i)->totalrecvbuf[j] = clientarray.at(i)->clientname[j];
+						if (clientarray.at(i)->clientname[j] == '\0')
+							break;
+					}
+					memcpy(&clientarray.at(i)->totalrecvbuf[j], " has left\r\n\0", 12);
+					int namesize = (j + 1) + 12;
+					for (int j = 0; j < array_size; j++){
+						if (i != j)
 							iSendResult = send(clientarray.at(j)->clientsocket, clientarray.at(i)->totalrecvbuf, namesize, 0);
-							
-							}
-						printf("Bytes sent: %d\n", iSendResult);
-						ZeroMemory(clientarray.at(i)->totalrecvbuf, recvbuflenmain);
+					}
+					printf("Bytes sent: %d\n", iSendResult);
+					ZeroMemory(clientarray.at(i)->totalrecvbuf, recvbuflenmain);
 
+					iResult = shutdown(clientarray.at(i)->clientsocket, SD_SEND);
+					if (iResult == SOCKET_ERROR)
+					{
+						printf("shutdown failed with error: %d\n", WSAGetLastError());
+						closesocket(ClientSocket);
+						WSACleanup();
+						return 1;
+					}
 
-					
+					closesocket(clientarray.at(i)->clientsocket);
+					delete clientarray.at(i);
+					clientarray.erase(clientarray.begin() + i);
 
+					array_size = clientarray.size();
 
-						iResult = shutdown(clientarray.at(i)->clientsocket, SD_SEND);
-						if (iResult == SOCKET_ERROR)
-						{
-
-							printf("shutdown failed with error: %d\n", WSAGetLastError());
-							closesocket(ClientSocket);
-							WSACleanup();
-							return 1;
-						}
-
-						closesocket(clientarray.at(i)->clientsocket);
-						delete clientarray.at(i);
-						clientarray.erase(clientarray.begin() + i);
-					
-
-						array_size = clientarray.size();
-
-						totalReceived = 0;
-					
+					totalReceived = 0;
 				}
 			}
 		}
-	}while (true);
-		
-	
-				
-
-
-
-
-		
-
+	} while (true);
 }
-		
-
-
-
-		
-		
-
 
 
 
