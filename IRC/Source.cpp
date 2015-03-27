@@ -20,7 +20,6 @@
 // #pragma comment (lib, "Mswsock.lib")
 
 using namespace std;
-
 #define DEFAULT_BUFLEN 512
 #define DEFAULT_PORT "6667"
 
@@ -213,8 +212,7 @@ int main()
 					clientarray.erase(clientarray.begin() + i);
 					array_size = clientarray.size();
 
-					totalReceived = 0;
-
+					totalReceived = 0;				
 				}
 				else if (currentReceived == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK)
 				{
