@@ -20,11 +20,7 @@
 // #pragma comment (lib, "Mswsock.lib")
 
 using namespace std;
-
 #define DEFAULT_BUFLEN 512
-#define DEFAULT_PORT "6667"
-void closesocket(int*,int*,int*,int*,int*,int*,int*);
-
 struct mystruct{
 	SOCKET clientsocket;
 	char clientname[16];
@@ -32,6 +28,12 @@ struct mystruct{
 	char tempbuf[DEFAULT_BUFLEN * 4];
 	char recvbuf[DEFAULT_BUFLEN];
 };
+
+
+#define DEFAULT_PORT "6667"
+void closeclient(mystruct*a,int*,int*,int*,int*,int*);
+
+
 
 vector <mystruct*> clientarray;
 mystruct *temp_pointer;
@@ -210,12 +212,14 @@ int main()
 				}
 				else if (currentReceived == 0)
 				{
-					void closesocket(int *i, int *iSendResult, int *array_size, int* recvbuflenmain, int * recvbuflen, int*iResult, int *totalReceived);
+					closeclient(clientarray.at(i), &iSendResult, &iResult, &totalReceived,&array_size,&i);
+					
 				}
 				else if (currentReceived == SOCKET_ERROR&& WSAGetLastError() != WSAEWOULDBLOCK)
 				{
 					printf("recv failed with error: %d\n", WSAGetLastError());
-					void closesocket(int *i, int *iSendResult, int *array_size, int* recvbuflenmain, int * recvbuflen, int*iResult, int *totalReceived);
+					closeclient(clientarray.at(i), &iSendResult, &iResult, &totalReceived, &array_size,&i);
+					
 					
 				}
 			}
@@ -223,40 +227,35 @@ int main()
 	} while (true);
 }
 
-void closesocket(int *i, int *iSendResult, int *array_size, int* recvbuflenmain, int * recvbuflen,int*iResult,int *totalReceived)
+void closeclient(mystruct*a, int *iSendResult, int*iResult, int *totalReceived,int*array_size,int *i)
 {
-	if (clientarray.at(*i)->clientname != NULL)
+	if (a->clientname != NULL)
 	{
 		int j;
-		for (j = 0; j < sizeof(clientarray.at(*i)->clientname); j++){
-			clientarray.at(*i)->totalrecvbuf[j] = clientarray.at(*i)->clientname[j];
-			if (clientarray.at(*i)->clientname[j] == '\0')
+		for (j = 0; j < sizeof(a->clientname); j++){
+			a->totalrecvbuf[j] = a->clientname[j];
+			if (a->clientname[j] == '\0')
 				break;
 		}
-		memcpy(&clientarray.at(*i)->totalrecvbuf[j], " has left\r\n\0", 12);
+		memcpy(&a->totalrecvbuf[j], " has left\r\n\0", 12);
 		int namesize = (j + 1) + 12;
 
 		for (int j = 0; j < *array_size; j++){
 			if (*i != j)
-				*iSendResult = send(clientarray.at(j)->clientsocket, clientarray.at(*i)->totalrecvbuf, namesize, 0);
+				*iSendResult = send(clientarray.at(j)->clientsocket, a->totalrecvbuf, namesize, 0);
 		}
 		printf("Bytes sent: %d\n", *iSendResult);
 	}
-	ZeroMemory(clientarray.at(*i)->totalrecvbuf, *recvbuflenmain);
-	ZeroMemory(clientarray.at(*i)->recvbuf, *recvbuflen);
-	ZeroMemory(clientarray.at(*i)->tempbuf, *recvbuflenmain);
-
-	*iResult = shutdown(clientarray.at(*i)->clientsocket, SD_SEND);
+	
+	*iResult = shutdown(a->clientsocket, SD_SEND);
 	if (*iResult == SOCKET_ERROR) {
 		printf("shutdown failed with error: %d\n", WSAGetLastError());
 		
 	}
-	closesocket(clientarray.at(*i)->clientsocket);
-	delete clientarray.at(*i);
+	closesocket(a->clientsocket);
+	delete a;
 	clientarray.erase(clientarray.begin() + *i);
-
 	*array_size = clientarray.size();
-
 	*totalReceived = 0;
 }
 
