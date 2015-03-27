@@ -23,7 +23,6 @@ using namespace std;
 
 #define DEFAULT_BUFLEN 512
 #define DEFAULT_PORT "6667"
-void closesocket(int*,int*,int*,int*,int*,int*,int*);
 
 struct mystruct{
 	SOCKET clientsocket;
@@ -32,6 +31,8 @@ struct mystruct{
 	char tempbuf[DEFAULT_BUFLEN * 4];
 	char recvbuf[DEFAULT_BUFLEN];
 };
+
+void closeclient(mystruct *client);
 
 vector <mystruct*> clientarray;
 mystruct *temp_pointer;
@@ -48,7 +49,6 @@ int main()
 	int bOptLen = sizeof(BOOL);
 
 	SOCKET ListenSocket = INVALID_SOCKET;
-	
 
 	struct addrinfo *result = NULL;
 	struct addrinfo hints;
@@ -82,7 +82,6 @@ int main()
 	if (ListenSocket == INVALID_SOCKET) {
 		printf("socket failed with error: %ld\n", WSAGetLastError());
 		system("pause");
-
 	}
 	iResult = ioctlsocket(ListenSocket, FIONBIO, &iMode);
 	if (iResult != NO_ERROR)
@@ -210,54 +209,55 @@ int main()
 				}
 				else if (currentReceived == 0)
 				{
-					void closesocket(int *i, int *iSendResult, int *array_size, int* recvbuflenmain, int * recvbuflen, int*iResult, int *totalReceived);
+					closeclient(clientarray.at(i));
+					clientarray.erase(clientarray.begin() + i);
+					array_size = clientarray.size();
+
+					totalReceived = 0;
+
 				}
-				else if (currentReceived == SOCKET_ERROR&& WSAGetLastError() != WSAEWOULDBLOCK)
+				else if (currentReceived == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK)
 				{
 					printf("recv failed with error: %d\n", WSAGetLastError());
-					void closesocket(int *i, int *iSendResult, int *array_size, int* recvbuflenmain, int * recvbuflen, int*iResult, int *totalReceived);
-					
+
+					closeclient(clientarray.at(i));
+					clientarray.erase(clientarray.begin() + i);
+					array_size = clientarray.size();
+
+					totalReceived = 0;
 				}
 			}
 		}
 	} while (true);
 }
 
-void closesocket(int *i, int *iSendResult, int *array_size, int* recvbuflenmain, int * recvbuflen,int*iResult,int *totalReceived)
+void closeclient(mystruct *client)
 {
-	if (clientarray.at(*i)->clientname != NULL)
+	int r;
+	if (client->clientname != NULL)
 	{
 		int j;
-		for (j = 0; j < sizeof(clientarray.at(*i)->clientname); j++){
-			clientarray.at(*i)->totalrecvbuf[j] = clientarray.at(*i)->clientname[j];
-			if (clientarray.at(*i)->clientname[j] == '\0')
+		for (j = 0; j < sizeof(client->clientname); j++){
+			client->totalrecvbuf[j] = client->clientname[j];
+			if (client->clientname[j] == '\0')
 				break;
 		}
-		memcpy(&clientarray.at(*i)->totalrecvbuf[j], " has left\r\n\0", 12);
+		memcpy(&client->totalrecvbuf[j], " has left\r\n\0", 12);
 		int namesize = (j + 1) + 12;
 
-		for (int j = 0; j < *array_size; j++){
-			if (*i != j)
-				*iSendResult = send(clientarray.at(j)->clientsocket, clientarray.at(*i)->totalrecvbuf, namesize, 0);
+		for (int j = 0; j < clientarray.size(); j++){
+			if (&client != &clientarray.at(j))
+				r = send(clientarray.at(j)->clientsocket, client->totalrecvbuf, namesize, 0);
 		}
-		printf("Bytes sent: %d\n", *iSendResult);
+		printf("Bytes sent: %d\n", r);
 	}
-	ZeroMemory(clientarray.at(*i)->totalrecvbuf, *recvbuflenmain);
-	ZeroMemory(clientarray.at(*i)->recvbuf, *recvbuflen);
-	ZeroMemory(clientarray.at(*i)->tempbuf, *recvbuflenmain);
 
-	*iResult = shutdown(clientarray.at(*i)->clientsocket, SD_SEND);
-	if (*iResult == SOCKET_ERROR) {
+	r = shutdown(client->clientsocket, SD_SEND);
+	if (r == SOCKET_ERROR) {
 		printf("shutdown failed with error: %d\n", WSAGetLastError());
-		
 	}
-	closesocket(clientarray.at(*i)->clientsocket);
-	delete clientarray.at(*i);
-	clientarray.erase(clientarray.begin() + *i);
-
-	*array_size = clientarray.size();
-
-	*totalReceived = 0;
+	closesocket(client->clientsocket);
+	delete client;
 }
 
 
